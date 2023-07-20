@@ -183,6 +183,7 @@ int main( int argc, char ** argv )
 		}
 
 		uint8_t wordset[2] = { word, 0xff };
+		printf( "Flashing config: 0x%x\r\n", word);
 		TPIWriteFlashWord( 0x3f40, wordset );
 
 		printf( "Set.\n" );
