@@ -9,18 +9,25 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#define BCM2708_PERI_BASE       0x7E000000
-#define GPIO_BASE                         (BCM2708_PERI_BASE + 0x200000)
+#if defined(TARGET_RPI_VERSION) && TARGET_RPI_VERSION == 4
+	#define BCM_PERI_BASE       0xFE000000
+#elif defined(TARGET_RPI_VERSION) && TARGET_RPI_VERSION == 3
+	#define BCM_PERI_BASE       0x3F000000
+#else
+	#error "Raspberry Pi version is not defined!"
+#endif
+
+
+
+#define GPIO_BASE		(BCM_PERI_BASE + 0x200000)
+#define GPIO_LEN  	0xF4   
 
 static int gpiofd;
 static uint32_t * gpiomem;
 
 //Based on http://www.pieter-jan.com/node/15
-
 int InitGenGPIO()
 {
-	int pagesize = getpagesize();
-
 	//Obtain handle to physical memory
 	if ((gpiofd = open ("/dev/mem", O_RDWR | O_SYNC) ) < 0)
 	{
@@ -28,14 +35,14 @@ int InitGenGPIO()
 		gpiomem = 0;
 		gpiofd = 0;
 		return -1;
-    }
+  }
 
+	printf("Mapping memory at 0x%x of len %d\n", GPIO_BASE, GPIO_LEN);
 	//map a page of memory to gpio at offset 0x20200000 which is where GPIO goodnessstarts
-	gpiomem = (uint32_t *)mmap(0, pagesize, PROT_READ|PROT_WRITE, MAP_SHARED, gpiofd, GPIO_BASE );
+	gpiomem = (uint32_t *)mmap(0, GPIO_LEN, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_LOCKED, gpiofd, GPIO_BASE );
 
-	if ((int32_t)gpiomem < 0)
-	{
-		printf("Mmap (GPIO) failed: %s\n", strerror(errno));
+	if (gpiomem == MAP_FAILED) {
+		printf("Mmap (GPIO) failed: %s, exit code: %d\n", strerror(errno), *gpiomem);
 		gpiomem = 0;
 		gpiofd = 0;
 		close( gpiofd );
