@@ -147,6 +147,7 @@ int main( int argc, char ** argv )
 	w: write flash.  Extra parameter  [binary file to flash]\n\
 	e: erase chip.\n\
 	c: config chip. Extra parameter   [config byte, default 0 (inverted)]\n\
+	l: config chip - LOCKBITS. Extra parameter   [config byte, default 0 (inverted)]\n\
 	r: dump chip memories\n\
 	o: oscillator calibration. Extra par [target MHz, optional or 'all']\n\
 	p: poke.  Extra: [address in flash] [value]\n");
@@ -174,8 +175,10 @@ int main( int argc, char ** argv )
 			return -4;
 		}
 
-		int word = ~atoi( argv[3] );
+		//int word = ~atoi( argv[3] );
+		int word = strtol(argv[3], NULL, 16);
 
+		printf( "Erasing...\n");
 		if( TPIEraseSection( 0x3f41 ) )
 		{
 			fprintf( stderr, "Error: Can't erase config.\n" );
@@ -190,6 +193,32 @@ int main( int argc, char ** argv )
 		TPIDump( 0x3f40, 0x02, "CONFIG" );
 
 	}
+	else if( argv[1][0] == 'L' || argv[1][0] == 'l' )
+	{
+		if( argc < 4 )
+		{
+			fprintf( stderr, "Error: Need more flags.\n" );
+			return -4;
+		}
+
+		int word = strtol(argv[3], NULL, 16);
+
+		printf( "Erasing...\n");
+		if( TPIEraseSection( 0x3f01 ) )
+		{
+			fprintf( stderr, "Error: Can't erase config.\n" );
+			return -14;
+		}
+
+		uint8_t wordset[2] = { word, 0xff };
+		printf( "Flashing NVM lockbits: 0x%x\r\n", word);
+		TPIWriteFlashWord( 0x3f00, wordset );
+
+		printf( "Set.\n" );
+		TPIDump( 0x3f00, 0x02, "NVM" );
+
+	}
+
 	else if( argv[1][0] == 'P' || argv[1][0] == 'p' )
 	{
 		if( argc != 5 )
